@@ -1,0 +1,4 @@
+numbers = [34, 35, 84, 23, 19]
+numbers.sort()               
+numbers.remove(23)           
+print(numbers)
