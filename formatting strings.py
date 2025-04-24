@@ -1,5 +1,4 @@
 #Assign_1
-
 name=input("Enter your name:")
 print(name)
 dish=input("Your favourite dish:")
@@ -7,7 +6,6 @@ print(dish)
 print("Hi"+ name+ "Your favourite dish is"+ dish)
 
 #Assign_2
-
 colors = ("yellow", "white", "black")
 colors_list = list(colors)
 print(colors_list)
