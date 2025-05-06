@@ -20,5 +20,6 @@ while booking < total:
             if parking_slot[i][j] == choosen_slot:
                parking_slot[i][j] ='X'
                booking += 1
-    print_slots()
+                 
+            print_slots()
    
