@@ -34,3 +34,26 @@ laptop.power_off()
 laptop.stop()
 
 
+
+
+
+class Dog:
+    def __init__(self, bio):
+       self.bio = bio
+    def bark(self):
+        print(f"{self.bio["name"] } is shouting bow bow ")
+    def hunt(self):
+        print(f"{self.bio["name"] }is hunting AHH AHHH AHHH")
+    def eat(self):
+        print(f"{self.bio["name"] } is eating yum yum yum")
+bio = {
+    "name": "Jimmy",
+    "breed": "husky",
+    "age": 3,
+    "weight": 12
+}
+ 
+dog = Dog(bio)
+dog.bark()
+dog.hunt()
+dog.eat()

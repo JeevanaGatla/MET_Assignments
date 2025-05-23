@@ -20,6 +20,13 @@ while booking < total:
             if parking_slot[i][j] == choosen_slot:
                parking_slot[i][j] ='X'
                booking += 1
+               found = True
+               break
+        if found:
+            break
+    if not found:
+        print("invalid or already booked slots.please try again.")
+    print_slots()
                  
-            print_slots()
+            
    
