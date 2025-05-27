@@ -1,0 +1,200 @@
+python -m uvicorn accounts:app  --reload 
+
+from fastapi import FastAPI
+import json
+import sqlite3
+
+def connect_db():
+    conn=sqlite3.connect("bank.db")
+    return conn
+ 
+app = FastAPI()
+
+account={}
+ 
+def load_users():
+    with open("db.json", 'r') as f:
+        data = json.load(f)
+        return data 
+def save_user(users):
+    with open("db.json", 'w') as f:
+        json.dump(users, f, indent=4)
+
+
+@app.post("/users/create/")
+def create_account(acc_no:int, ifsc:str, branch_name:str, first_name:str, last_name:str, balance:float):
+    conn = connect_db()
+    cursor = conn.cursor()
+    
+    cursor.execute ('''INSERT INTO accounts (acc_no, ifsc, branch_name, first_name, last_name, balance) VALUES (?, ?, ?, ?, ?, ?) ''', 
+                    (acc_no, ifsc, branch_name, first_name, last_name, balance))
+
+    conn.commit()
+    conn.close()
+ 
+    return {"output" : "Account created successfully"}
+
+    
+
+@app.post("/users/credit")
+def credit_money(acc_no:int,credit_amount:float):
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT balance FROM accounts WHERE acc_no = ?",(acc_no,))
+    data = cursor.fetchone()
+    if  data:
+        new_balance = data[0] + credit_amount
+        cursor.execute("UPDATE accounts SET balance = ? WHERE acc_no = ?", (new_balance, acc_no))
+        conn.commit()
+        return {"message": "Money credited", "new_balance": new_balance}
+    else :
+        return {"error" : "Account not found" }
+        
+
+@app.post("/users/debit")
+def debit_money(acc_no:int,debit_amount:float):
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT balance FROM accounts WHERE acc_no = ?", (acc_no,))
+    data = cursor.fetchone()
+    if not data:
+        return{"error" : "Account not found" }
+    new_balance = data[0] - debit_amount
+    cursor.execute("UPDATE accounts SET balance = ? WHERE acc_no = ?", (new_balance, acc_no))
+    conn.commit()
+    return {"message": "Money debited", "new_balance": new_balance}
+
+
+@app.post("/users/transfer")
+def transfer_money (from_accno:int,to_accno:int,transfer_amount:float):
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT balance FROM accounts WHERE acc_no = ?", (from_accno,))
+    from_data = cursor.fetchone()
+    if not from_data:
+        return {"error":"Sender account not found"}
+    
+    cursor.execute("SELECT balance FROM accounts WHERE acc_no = ?", (to_accno,))
+    to_data = cursor.fetchone()
+    if not to_data:
+        return {"error":"Receiver account not found"}
+    if from_data[0]<transfer_amount:
+        return {"error":"Insufficient balance"}
+    
+    cursor.execute("UPDATE accounts SET balance = ? WHERE acc_no = ?", (from_data[0] - transfer_amount, from_accno))
+    cursor.execute("UPDATE accounts SET balance = ? WHERE acc_no = ?", (to_data[0] + transfer_amount,to_accno))
+    conn.commit()
+    return {"message": "Transfer successful"}
+
+
+@app.get("/users/detail")
+def get_account_details(acc_no:int):
+    conn = connect_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM accounts WHERE acc_no = ? ", (acc_no,))
+    data = cursor.fetchone()
+    
+    if data:
+        accounts = {
+            "id": data[0],
+            "acc_no": data[1],
+            "ifsc": data[2],
+            "branch_name": data[3],
+            "first_name": data[4],
+            "last_name": data[5],
+            "balance": data[6]
+        }
+        return {"accounts": accounts}
+    else:
+        return {"error":"Account not found"}
+    
+
+
+
+
+    import streamlit as st
+
+if "accounts" not in st.session_state:
+    st.session_state.accounts = {}
+    st.session_state.next_id = 1
+
+st.title("BANKING SYSTEM")
+
+tab1, tab2, tab3, tab4 = st.tabs(["Create Account", "Deposit", "Withdraw", "Transfer"])
+
+
+with tab1:
+    st.header("Create Account")
+    name = st.text_input("Enter your full Name")
+    email = st.text_input("Enter your Email")
+    deposit = st.number_input("Initial Deposit", min_value=0.0)
+
+    if st.button("Create"):
+        account_id = str(st.session_state.next_id)
+        st.session_state.accounts[account_id] = {
+            "name": name,
+            "email": email,
+            "balance": deposit
+        }
+        st.session_state.next_id += 1
+        st.success(f"Account created with ID: {account_id}")
+        st.write(st.session_state.accounts[account_id])
+
+
+with tab2:
+    st.header("Deposit Money")
+    acc_id = st.text_input("Account ID", key="dep_id")
+    amount = st.number_input("Amount", min_value=0.0, key="dep_amt")
+
+    if st.button("Deposit"):
+        if acc_id in st.session_state.accounts:
+            st.session_state.accounts[acc_id]["balance"] += amount
+            st.success("Deposit successful!")
+            st.write(st.session_state.accounts[acc_id])
+        else:
+            st.error("Account not found")
+
+
+with tab3:
+    st.header("Withdraw Money")
+    acc_id = st.text_input("Account ID", key="with_id")
+    amount = st.number_input("Amount", min_value=0.0, key="with_amt")
+
+    if st.button("Withdraw"):
+        if acc_id in st.session_state.accounts:
+            if st.session_state.accounts[acc_id]["balance"] >= amount:
+                st.session_state.accounts[acc_id]["balance"] -= amount
+                st.success("Withdrawal successful!")
+                st.write(st.session_state.accounts[acc_id])
+            else:
+                st.error("Insufficient balance")
+        else:
+            st.error("Account not found")
+
+
+with tab4:
+    st.header("Transfer Money")
+    from_id = st.text_input("From Account ID")
+    to_id = st.text_input("To Account ID")
+    amount = st.number_input("Amount")
+
+    if st.button("Transfer"):
+        if from_id in st.session_state.accounts and to_id in st.session_state.accounts:
+            if st.session_state.accounts[from_id]["balance"] >= amount:
+                st.session_state.accounts[from_id]["balance"] -= amount
+                st.session_state.accounts[to_id]["balance"] += amount
+                st.success("Transfer successful!")
+                st.write("Sender:", st.session_state.accounts[from_id])
+                st.write("Recipient:", st.session_state.accounts[to_id])
+            else:
+                st.error("Insufficient balance")
+        else:
+            st.error("One or both account IDs not found")
+
+
+
+
+            if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("backend:app", host="127.0.0.1", port=8000, reload=True)

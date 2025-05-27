@@ -1,0 +1,9 @@
+[{
+   "id" : "1",
+   "acc_no" :"124567",
+   "ifsc" : "ABC1234", 
+   "branch_name" : "KPHB", 
+   "first_name" : "Gatla",
+   " last_name" : "Jeev", 
+   "balance" :"0"
+   }]
